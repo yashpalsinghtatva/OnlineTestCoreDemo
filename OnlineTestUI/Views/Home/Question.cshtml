@@ -1,0 +1,261 @@
+﻿
+
+<style>
+    body {
+        background-color: #eee;
+    }
+
+    label.radio {
+        cursor: pointer;
+    }
+
+        label.radio input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        label.radio span {
+            padding: 4px 0px;
+            border: 1px solid red;
+            display: inline-block;
+            color: red;
+            width: 100px;
+            text-align: center;
+            border-radius: 3px;
+            margin-top: 7px;
+            text-transform: uppercase;
+        }
+
+        label.radio input:checked + span {
+            border-color: red;
+            background-color: red;
+            color: #fff;
+        }
+
+    .ans {
+        margin-left: 36px !important;
+    }
+
+    .btn:focus {
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .btn:active {
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+</style>
+
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-center row">
+        <div class="col-md-10 col-lg-10">
+            <div class="border">
+                <div class="question bg-white p-3 border-bottom">
+                    <div class="d-flex flex-row justify-content-between align-items-center mcq">
+                        <h4>MCQ Quiz</h4><span id="spnQuestionNumber"></span>
+                    </div>
+                </div>
+                <div class="question bg-white p-3 border-bottom">
+                    <div class="d-flex flex-row justify-content-between align-items-center mcq" id="dvQuestionNumber">
+
+                    </div>
+                </div>
+                <div class="question bg-white p-3 border-bottom">
+                    <div class="d-flex flex-row align-items-center question-title">
+                        <h3 class="text-danger">Q.</h3>
+                        <h5 class="mt-1 ml-2"><pre style="white-space: break-spaces;"> <span id="spnQuestionText"></span> </pre> </h5>
+                    </div>
+                    <div id="dvOptions">
+
+                    </div>
+
+                </div>
+                <div class="d-flex flex-row justify-content-between align-items-center p-3 bg-white">
+
+                    <button class="btn btn-primary d-flex align-items-center btn-danger" name="btnPrev" id="btnPrev" type="button" value="Prev"><i class="fa fa-angle-left mt-1 mr-1"></i>&nbsp;previous</button>
+
+                    <button class="btn btn-primary border-success align-items-center btn-success" name="btnNext" id="btnNext" type="button"> <i class="fa fa-angle-right ml-2" id="iNext"></i></button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/Global.js"></script>
+
+<script>
+    let questions = null;
+    let currentStudent = null;
+    $(document).ready(function () {
+        debugger;
+        if (localStorage.getItem('CurrentStudent') == null) {
+            window.location.href = '/Home/Index';
+
+        } else {
+            currentStudent = JSON.parse(localStorage.getItem('CurrentStudent'));
+        }
+        $.ajax({
+            type: "GET",
+            url: ServiceUrl + "/Question/GetRandomQuestion/" + currentStudent.candidatePreferedLanguageId,
+            data: {},
+            success: function (data) {
+                try {
+                    if (data == null || data == "" || data.length <= 0) {
+                        alert("No Question Found");
+                        window.location.href = '/Home/Index';
+                        return;
+
+                    }
+                    questions = data;
+                    let questionNumberStr = "";
+                    for (let i = 0; i < questions.length; i++) {
+
+                        questionNumberStr += "<button name='btnQuestion" + i + "' type='button' onClick='ChangeQuestion(" + i + ",\"" + questions[i].questionId + "\",false,false)' class='btn " + (i == 0 ? "btn-info" : "btn-secondary") + " btn-circle btn-xl'> " + (i + 1) + "</button>";
+                    }
+                    $("#dvQuestionNumber").html(questionNumberStr);
+                    $("#spnQuestionText").text(questions[0].questionText);
+
+                    ChangeOptions(questions[0].options, questions[0].questionType.questionTypeName, questions[0].userAnswers);
+
+                    $("#btnPrev").prop('disabled', true);
+                    $("#btnNext").val('Next').attr("onClick", "ChangeQuestion(1,'" + questions[0].questionId + "',true,true);");
+                    $("#iNext").text('Next');
+                } catch (e) {
+                    alert("Error in processing Questions " + e.message);
+
+                }
+            },
+            error: function (request, status, errorThrown) {
+                alert("Error in Getting Questions");
+            }
+
+        });
+    });
+    function ChangeQuestion(questionNumber, questionId, IsSaveAnswer, isNext) {
+
+        if (IsSaveAnswer) {
+            saveAnswer(questionNumber, isNext);
+        }
+        $("#spnQuestionText").text(questions[questionNumber].questionText);
+        ChangeOptions(questions[questionNumber].options, questions[questionNumber].questionType.questionTypeName, questions[questionNumber].userAnswers);
+        if (questionNumber == 0) {
+            $("#btnPrev").prop('disabled', true);
+        } else {
+            $("#btnPrev").attr("onClick", "ChangeQuestion(" + (questionNumber - 1) + ",'" + questions[questionNumber].questionId + "',true,false);");
+            $("#btnPrev").prop('disabled', false);
+
+
+        }
+        if (questionNumber == questions.length - 1) {
+            $("#btnNext").val('Submit').attr("onClick", "SaveResult();");
+            $("#iNext").text('Submit');
+        }
+        else {
+            $("#btnNext").val('Next').attr("onClick", "ChangeQuestion(" + (questionNumber + 1) + ",'" + questions[questionNumber].questionId + "',true,true);");
+            $("#iNext").text('Next');
+        }
+        $("button[name^='btnQuestion']").each(function () {
+
+            for (let i = 0; i < questions.length; i++) {
+                if ($(this).attr("name").includes("btnQuestion" + i)) {
+                    if (questions[i].userAnswers != null && questions[i].userAnswers != '' && questions[i].userAnswers.length > 0) {
+                        $(this).removeClass().addClass('btn btn-success btn-circle btn-xl');
+
+                    }
+                    else {
+                        $(this).removeClass().addClass('btn btn-primary btn-circle btn-xl');
+                    }
+                }
+            }
+        });
+        $("button[name='btnQuestion" + questionNumber + "']").each(function () {
+            $(this).removeClass().addClass('btn btn-info btn-circle btn-xl');
+        });
+
+
+    }
+    function ChangeOptions(options, questionType, userAnswers) {
+        let strOptionsdiv = "";
+        if (questionType == "FIB") {
+            strOptionsdiv += "<div class='ans ml-2'>";
+            strOptionsdiv += "<input type='text'  name='userAnswer' value ='" + (userAnswers != null ? userAnswers[0] : "") + "' placeholder='enter answer'  id='userAnswer'/> ";
+            strOptionsdiv += "</div>";
+        }
+        else {
+            for (let j = 0; j < options.length; j++) {
+
+                strOptionsdiv += "<div class='ans ml-2'>";
+                strOptionsdiv += "<label class='radio'>";
+                if (questionType == "TF") {
+
+                    strOptionsdiv += "<input type='radio'  name='userAnswer' " + (userAnswers != null && userAnswers.includes(options[j].optionText) ? "checked" : "") + " value='" + options[j].optionText + "'> <span>" + options[j].optionText + "</span>";
+                }
+                else {
+                    strOptionsdiv += "<input type='checkbox'  name='userAnswer' " + (userAnswers != null && userAnswers.includes(options[j].optionText) ? "checked" : "") + " value='" + options[j].optionText + "'> <span>" + options[j].optionText + "</span>";
+                }
+                strOptionsdiv += "</label>";
+                strOptionsdiv += "</div>";
+            }
+        }
+
+        $("#dvOptions").html(strOptionsdiv);
+
+    }
+    function saveAnswer(questionNumber, isNext) {
+        let toSaveQuestionNumber = 0;
+        let userAnswers = [];
+        if (isNext) {
+            toSaveQuestionNumber = questionNumber - 1;
+        }
+        else {
+            toSaveQuestionNumber = questionNumber + 1;
+        }
+        if (questions[toSaveQuestionNumber].questionType.questionTypeName == "FIB") {
+            $("input[name='userAnswer']").each(function () {
+                userAnswers.push($(this).val());
+            });
+
+        } else {
+            $("input[name='userAnswer']:checked").each(function () {
+                userAnswers.push($(this).val());
+            });
+        }
+        questions[toSaveQuestionNumber].userAnswers = userAnswers;
+    }
+    function SaveResult() {
+        saveAnswer(questions.length, true);
+        let CandidateAnswerDetails = new Object();
+        CandidateAnswerDetails.allAnsweredQuestions = questions;
+        CandidateAnswerDetails.candidateId = currentStudent.candidateId;
+
+        $.ajax({
+            url: ServiceUrl + "/Question/CalculateResult",
+            type: "POST",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify(CandidateAnswerDetails),
+            success: function (data) {
+                try {
+                    debugger;
+                    localStorage.setItem("SummaryResult", JSON.stringify(data));
+                    window.location.href = '/Home/Summary';
+
+                } catch (e) {
+                    alert("Error after getting result" + e.message);
+                }
+            },
+            error: function (e) {
+                console.log(e);
+            },
+
+        });
+    }
+</script>

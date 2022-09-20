@@ -1,0 +1,168 @@
+﻿
+<style>
+    body {
+        background-color: #eee;
+    }
+
+    label.radio {
+        cursor: pointer;
+    }
+
+        label.radio input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        label.radio span {
+            padding: 4px 0px;
+            border: 1px solid red;
+            display: inline-block;
+            color: red;
+            width: 100px;
+            text-align: center;
+            border-radius: 3px;
+            margin-top: 7px;
+            text-transform: uppercase;
+        }
+
+        label.radio input:checked + span {
+            border-color: red;
+            background-color: red;
+            color: #fff;
+        }
+
+    .ans {
+        margin-left: 36px !important;
+    }
+
+    .btn:focus {
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .btn:active {
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+</style>
+
+
+<div id="main" style="width: 600px;height:400px; left:40px;"></div>
+<div style="padding :0px 400px;">You got <b> <span id="spnObtainedMarks"></span> </b> from <b> <span id="spnTotalMarks"></span> </b></div>
+<div id="dvResult">
+
+</div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/echarts.js"></script>
+<script type="text/javascript">
+
+    let SummaryResult = null;
+    $(document).ready(function () {
+        if (localStorage.getItem('SummaryResult') == null) {
+            window.location.href = '/Home/Index';
+
+        } else {
+            SummaryResult = JSON.parse(localStorage.getItem('SummaryResult'));
+        }
+        if (SummaryResult != null) {
+            var chartDom = document.getElementById('main');
+            var colorPalette = ['#00b04f', '#ffbf00', 'ff0000']
+            var myChart = echarts.init(chartDom);
+            var option;
+
+            option = {
+                title: {
+                    text: 'Test Result',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: function (params) {
+                        let res = "";
+
+                        res += "Value : " + params.value.toLocaleString() + '</br>';
+                        res += "Percent : " + params.percent + '%</br>';
+
+                        return res;
+                    }
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left'
+                },
+                series: [
+                    {
+                        name: 'Online Test',
+                        color: colorPalette,
+                        type: 'pie',
+                        radius: '50%',
+                        label: {
+                            show: false
+                        },
+                        data: [
+                            { value: SummaryResult.result.obtainedMarks, name: 'Correct' },
+                            { value: SummaryResult.result.totalMarks - SummaryResult.result.obtainedMarks, name: 'In Correct' }
+                        ]
+                    }
+                ]
+            };
+            option && myChart.setOption(option);
+            $("#spnObtainedMarks").text(SummaryResult.result.obtainedMarks);
+            $("#spnTotalMarks").text(SummaryResult.result.totalMarks);
+            $("#dvResult").html(addResultToPage(SummaryResult))
+        }
+    });
+
+    function addResultToPage(SummaryResult) {
+        let pageContent = "";
+        for (var question of SummaryResult.questions) {
+            pageContent += '<div class="container mt-5">';
+            pageContent += '<div class="d-flex justify-content-center row">';
+            pageContent += '<div class="col-md-10 col-lg-10">';
+            pageContent += '<div class="border">';
+            pageContent += '<div class="question bg-white p-3 border-bottom">';
+            pageContent += '<div class="d-flex flex-row justify-content-between align-items-center mcq"></div>';
+            pageContent += ' </div>';
+            pageContent += '<div class="question bg-white p-3 border-bottom">';
+            pageContent += '<div class="d-flex flex-row align-items-center question-title">';
+            pageContent += '<h3 class="text-danger">Q. </h3>';
+            pageContent += '<h5 class="mt-1 ml-2">' + question.questionText + '</h5>';
+            pageContent += '</div>';
+            for (let option of question.options) {
+                pageContent += '<div class="ans ml-2" style="width: auto;">';
+                pageContent += '<label class="radio">';
+                pageContent += '<label value="' + option.optionText + '"> ' + option.optionText + '</label>';
+                pageContent += '</label>';
+                pageContent += '</div>';
+            }
+            pageContent += '<div class="d-flex flex-row align-items-center question-title">';
+            pageContent += '<h3 class="text-success">Ans :</h3>';
+
+            for (let answer of question.answers) {
+
+                pageContent += '<h5 class="mt-1 ml-2">' + answer.answerText + '</h5>';
+            }
+            pageContent += '</div>';
+
+            pageContent += '<div class="d-flex flex-row align-items-center question-title">';
+            pageContent += '<h3 class="text-success">Your Ans : </h3>';
+
+            if (question.userAnswers != null && question.userAnswers.length > 0) {
+                pageContent += '<h5 class="mt-1 ml-2">' + question.userAnswers.join(" ") + '</h5>';
+            }
+            pageContent += '</div>';
+            pageContent += '</div>';
+            pageContent += '</div>';
+            pageContent += '</div>';
+            pageContent += '</div>';
+            pageContent += '</div>';
+        }
+        return pageContent;
+    }
+</script>

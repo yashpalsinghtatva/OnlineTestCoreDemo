@@ -1,0 +1,147 @@
+﻿<button type="button" id="btnCandidateDetails" class="btn btn-lg btn-primary">Take Test</button>
+<!-- Modal HTML -->
+<div id="candidateModel" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="student-form" action="" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Your Details</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label for="candidateName" class="control-label col-md-5">Candidate Name</label>
+                            <div class="col-md-7">
+                                <input type="text" id="candidateName" class="form-control" required />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="candidateEmail" class="control-label col-md-5">Candidate Email</label>
+                            <div class="col-md-7">
+                                <input type="email" id="candidateEmail" class="form-control" required />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="candidatePhoneNo" class="control-label col-md-5">Candidate Phone No</label>
+                            <div class="col-md-7">
+                                <input type="text" id="candidatePhoneNo" class="form-control" required />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="candidatePreferedLanguageId" class="control-label col-md-6">Test Prefered Language</label>
+                            <div class="col-md-6">
+                                <select id="candidatePreferedLanguageId" name="candidatePreferedLanguageId" class="form-control"> </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-md-2">Gender</label>
+                            <div class="col-md-6">
+                                Male
+                                <input type="radio" name="Gender" value="M" id="rbtnMale" checked="checked" />
+                                Female
+                                <input type="radio" name="Gender" value="F" id="rbtnFemale" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <input type="button" id="btnAddCandidate" value="Start Test" class="btn btn-success" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/lib/jquery-validation/dist/jquery.validate.js"></script>
+<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.js"></script>
+<script src="~/js/Global.js"></script>
+<script>
+    $(document).ready(function () {
+        localStorage.clear();
+        $.ajax({
+            type: "GET",
+            url: "http://localhost:30412/api/Language/GetAllLanguages",
+            data: "{}",
+            success: function (data) {
+                try {
+                    let option;
+                    if (data.length <= 0) {
+                        $("#btnCandidateDetails").hide();
+                        alert("No prefered Language added in system add it first");
+                    } else {
+                        $("#btnCandidateDetails").show();
+                        for (let i = 0; i < data.length; i++) {
+                            option += '<option value="' + data[i].languageId + '">' + data[i].languageName + '</option>';
+                        }
+                        $("#candidatePreferedLanguageId").html(option);
+
+                    }
+                    
+                } catch (e) {
+                    alert("Error in Adding Languages to Dropdown" + e.message);
+
+                }
+            },
+            error: function (request, status, errorThrown) {
+                alert("Error in getting all Languages");
+            }
+
+        });
+
+
+        $("#btnCandidateDetails").click(function () {
+            $("#candidateModel").modal('show');
+        });
+
+        $("#btnAddCandidate").click(function (e) {
+
+            if ($("#candidateName").val() == "" || $("#candidateEmail").val() == "" || $("#candidatePhoneNo").val() == "") {
+                alert("Please fill details carefully and in proper format");
+                return false;
+            }
+            let Candidate = new Object();
+            Candidate.candidateName = $("#candidateName").val();
+            Candidate.candidateEmail = $("#candidateEmail").val();
+            Candidate.candidiatePhoneNo = $("#candidatePhoneNo").val();
+            Candidate.candidateGender = document.querySelector('input[name="Gender"]:checked').value;
+            Candidate.preferedLanguageId = $("#candidatePreferedLanguageId").val();
+
+            var newData = {
+
+                "candidateName": $("#candidateName").val(),
+                "candidateEmail": $("#candidateEmail").val(),
+                "candidiatePhoneNo": $("#candidatePhoneNo").val(),
+                "candidateGender": document.querySelector('input[name="Gender"]:checked').value,
+                "candidatePreferedLanguageId": parseInt($("#candidatePreferedLanguageId").val())
+            };
+
+            var dataJson = JSON.stringify(newData);
+            $.ajax({
+                url: ServiceUrl + "/Candidate",
+                type: "POST",
+                dataType: 'json',
+                contentType: "application/json; charset=utf-8",
+                data: dataJson,
+                success: function (data) {
+                    try {
+                        localStorage.setItem("CurrentStudent", JSON.stringify(data));
+                        window.location.href = '/Home/Question';
+
+                    } catch (e) {
+                        alert("Error after adding Candidate" + e.message);
+                    }
+                },
+                error: function (e) {
+                    console.log(e);
+                },
+
+            });
+        });
+    });
+
+</script>
+

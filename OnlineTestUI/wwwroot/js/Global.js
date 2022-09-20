@@ -1,0 +1,1 @@
+﻿let ServiceUrl = "http://localhost:30412/api";
